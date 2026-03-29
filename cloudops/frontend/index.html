@@ -2,7 +2,46 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">async function sendChat() {
+  const input = document.getElementById('chatInput');
+  const msg   = input.value.trim();
+  if (!msg) return;
+
+  addMsg(msg, 'user');
+  input.value = '';
+  document.getElementById('chatBtn').disabled = true;
+
+  const thinking = addMsg('⏳ Thinking...', 'bot');
+
+  try {
+    const res = await fetch(`${API}/api/chat`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        message: msg,
+        scan_context: scanData || {}
+      })
+    });
+
+    const data = await res.json();
+    thinking.remove();
+
+    // 🔥 HANDLE ALL CASES
+    if (data.response) {
+      addMsg(data.response, 'bot');
+    } else if (data.detail) {
+      addMsg("⚠️ " + data.detail, 'bot');
+    } else {
+      addMsg("⚠️ Unexpected response from server", 'bot');
+    }
+
+  } catch(e) {
+    thinking.remove();
+    addMsg("❌ Backend not reachable (Render sleeping or network issue)", 'bot');
+  }
+
+  document.getElementById('chatBtn').disabled = false;
+}
 <title>CloudOps AI Copilot — GCP Security Dashboard</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
