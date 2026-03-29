@@ -1,479 +1,262 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">async function sendChat() {
-  const input = document.getElementById('chatInput');
-  const msg   = input.value.trim();
-  if (!msg) return;
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CloudOps AI Copilot — GCP Security Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #060D1F; color: #E8F0FE; min-height: 100vh }
 
-  addMsg(msg, 'user');
-  input.value = '';
-  document.getElementById('chatBtn').disabled = true;
+        /* ── Header ── */
+        .header { background: #0D1B3E; border-bottom: 2px solid #4285F4; padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100 }
+        .logo { display: flex; align-items: center; gap: 10px }
+        .logo-icon { width: 32px; height: 32px; background: linear-gradient(135deg, #4285F4, #34A853, #FBBC05, #EA4335); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px }
+        .logo-text { font-size: 20px; font-weight: 700; color: #fff }
+        .logo-text span { color: #4285F4 }
+        .header-right { display: flex; align-items: center; gap: 12px }
+        .model-badge { background: #132554; border: 1px solid #4285F4; color: #4285F4; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600 }
+        .gcp-badge { background: #132554; border: 1px solid #34A853; color: #34A853; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600 }
 
-  const thinking = addMsg('⏳ Thinking...', 'bot');
+        /* ── Layout ── */
+        .main { padding: 20px 28px; max-width: 1440px; margin: 0 auto }
+        .scan-row { display: flex; align-items: center; gap: 14px; margin-bottom: 20px }
+        .scan-btn { background: #4285F4; color: #fff; border: none; padding: 11px 26px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: .15s }
+        .scan-btn:hover { background: #3367D6 }
+        .scan-btn:disabled { background: #132554; color: #8BA3C7; cursor: not-allowed }
 
-  try {
-    const res = await fetch(`${API}/api/chat`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        message: msg,
-        scan_context: scanData || {}
-      })
-    });
+        /* ── Stats ── */
+        .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 20px }
+        .stat-card { background: #0D1B3E; border-radius: 12px; padding: 18px; border: 1px solid #132554; position: relative; overflow: hidden }
+        .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px }
+        .stat-card.risk::before { background: #4285F4 }
+        .stat-card.critical::before { background: #EA4335 }
+        .stat-card.high::before { background: #FBBC05 }
+        .stat-card.findings::before { background: #34A853 }
+        .stat-card.cost::before { background: #FF6D00 }
+        .stat-value { font-size: 32px; font-weight: 700; margin-bottom: 4px }
+        .stat-label { font-size: 11px; color: #8BA3C7; letter-spacing: .04em; font-weight: 600 }
+        .risk-bar { height: 6px; background: #132554; border-radius: 3px; overflow: hidden; margin-top: 8px }
+        .risk-fill { height: 100%; border-radius: 3px; transition: width 1.2s ease }
 
-    const data = await res.json();
-    thinking.remove();
+        /* ── Severity Chart ── */
+        .sev-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px }
+        .sev-label { min-width: 70px; font-size: 11px; font-weight: 700 }
+        .sev-bar-bg { flex-grow: 1; height: 12px; background: #132554; border-radius: 6px; overflow: hidden }
+        .sev-bar-fill { height: 100%; width: 0%; transition: width 1s ease }
 
-    // 🔥 HANDLE ALL CASES
-    if (data.response) {
-      addMsg(data.response, 'bot');
-    } else if (data.detail) {
-      addMsg("⚠️ " + data.detail, 'bot');
-    } else {
-      addMsg("⚠️ Unexpected response from server", 'bot');
-    }
+        /* ── Chat Logic ── */
+        .chat-container { background: #0D1B3E; border-radius: 12px; padding: 18px; border: 1px solid #132554 }
+        .chat-messages { height: 350px; overflow-y: auto; margin-bottom: 14px; display: flex; flex-direction: column; gap: 10px }
+        .msg { padding: 10px 14px; border-radius: 10px; max-width: 92%; font-size: 13px; line-height: 1.55 }
+        .msg.user { background: #132554; border: 1px solid #4285F4; align-self: flex-end; color: #E8F0FE; border-radius: 10px 10px 2px 10px }
+        .msg.bot { background: #0a1628; border: 1px solid #34A853; align-self: flex-start; color: #E8F0FE; border-radius: 10px 10px 10px 2px }
+        
+        /* Markdown styles */
+        .msg pre { background: #060D1F; padding: 10px; border-radius: 6px; margin: 8px 0; overflow-x: auto; border: 1px solid #132554 }
+        .msg code { color: #FBBC05; font-family: monospace }
 
-  } catch(e) {
-    thinking.remove();
-    addMsg("❌ Backend not reachable (Render sleeping or network issue)", 'bot');
-  }
-
-  document.getElementById('chatBtn').disabled = false;
-}
-<title>CloudOps AI Copilot — GCP Security Dashboard</title>
-<style>
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#060D1F;color:#E8F0FE;min-height:100vh}
-
-  /* ── Header ── */
-  .header{background:#0D1B3E;border-bottom:2px solid #4285F4;padding:14px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
-  .logo{display:flex;align-items:center;gap:10px}
-  .logo-icon{width:32px;height:32px;background:linear-gradient(135deg,#4285F4,#34A853,#FBBC05,#EA4335);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
-  .logo-text{font-size:20px;font-weight:700;color:#fff}
-  .logo-text span{color:#4285F4}
-  .header-right{display:flex;align-items:center;gap:12px}
-  .model-badge{background:#132554;border:1px solid #4285F4;color:#4285F4;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600}
-  .gcp-badge{background:#132554;border:1px solid #34A853;color:#34A853;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600}
-
-  /* ── Layout ── */
-  .main{padding:20px 28px;max-width:1440px;margin:0 auto}
-  .scan-row{display:flex;align-items:center;gap:14px;margin-bottom:20px}
-  .scan-btn{background:#4285F4;color:#fff;border:none;padding:11px 26px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;transition:.15s}
-  .scan-btn:hover{background:#3367D6}
-  .scan-btn:disabled{background:#132554;color:#8BA3C7;cursor:not-allowed}
-  .project-info{background:#0D1B3E;border:1px solid #132554;border-radius:8px;padding:8px 16px;font-size:12px;color:#8BA3C7}
-  .project-info span{color:#E8F0FE;font-weight:600}
-
-  /* ── Stats ── */
-  .stats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px}
-  .stat-card{background:#0D1B3E;border-radius:12px;padding:18px;border:1px solid #132554;position:relative;overflow:hidden}
-  .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
-  .stat-card.risk::before{background:#4285F4}
-  .stat-card.critical::before{background:#EA4335}
-  .stat-card.high::before{background:#FBBC05}
-  .stat-card.findings::before{background:#34A853}
-  .stat-card.cost::before{background:#FF6D00}
-  .stat-value{font-size:32px;font-weight:700;margin-bottom:4px}
-  .stat-label{font-size:11px;color:#8BA3C7;letter-spacing:.04em;font-weight:600}
-  .risk-bar{height:6px;background:#132554;border-radius:3px;overflow:hidden;margin-top:8px}
-  .risk-fill{height:100%;border-radius:3px;transition:width 1.2s ease}
-
-  /* ── Main grid ── */
-  .content-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
-  .card{background:#0D1B3E;border-radius:12px;padding:18px;border:1px solid #132554}
-  .card-title{font-size:11px;font-weight:700;color:#8BA3C7;letter-spacing:.06em;margin-bottom:14px;display:flex;align-items:center;gap:6px}
-
-  /* ── Resource list ── */
-  .resource-item{background:#0a1628;border-radius:8px;padding:12px 14px;margin-bottom:8px;border-left:4px solid #132554;cursor:pointer;transition:.15s}
-  .resource-item:hover{background:#132554}
-  .resource-item.has-critical{border-left-color:#EA4335}
-  .resource-item.has-high{border-left-color:#FBBC05}
-  .resource-item.has-medium{border-left-color:#4285F4}
-  .resource-item.no-issues{border-left-color:#34A853}
-  .resource-name{font-size:13px;font-weight:600;color:#fff;margin-bottom:3px}
-  .resource-meta{font-size:11px;color:#8BA3C7}
-  .resource-badges{display:flex;gap:4px;margin-top:5px;flex-wrap:wrap}
-  .rbadge{padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700}
-  .rbadge-critical{background:rgba(234,67,53,.2);color:#EA4335;border:1px solid #EA433540}
-  .rbadge-high{background:rgba(251,188,5,.15);color:#FBBC05;border:1px solid #FBBC0540}
-  .rbadge-medium{background:rgba(66,133,244,.15);color:#4285F4;border:1px solid #4285F440}
-
-  /* ── Findings ── */
-  .finding-item{padding:10px 14px;border-radius:8px;margin-bottom:8px;border-left:3px solid;cursor:pointer;transition:.15s}
-  .finding-item:hover{filter:brightness(1.1)}
-  .sev-CRITICAL{background:rgba(234,67,53,.1);border-color:#EA4335}
-  .sev-HIGH{background:rgba(251,188,5,.08);border-color:#FBBC05}
-  .sev-MEDIUM{background:rgba(66,133,244,.1);border-color:#4285F4}
-  .sev-LOW{background:rgba(139,163,199,.08);border-color:#8BA3C7}
-  .sev-badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;margin-bottom:4px}
-  .badge-CRITICAL{background:#EA4335;color:#fff}
-  .badge-HIGH{background:#FBBC05;color:#060D1F}
-  .badge-MEDIUM{background:#4285F4;color:#fff}
-  .badge-LOW{background:#8BA3C7;color:#060D1F}
-  .rule-code{font-size:10px;color:#8BA3C7;font-family:monospace;margin-left:6px}
-  .finding-title{font-size:13px;font-weight:600;color:#fff;margin-bottom:3px}
-  .finding-desc{font-size:12px;color:#8BA3C7;line-height:1.4}
-  .finding-fix{font-size:11px;color:#34A853;margin-top:4px;display:none;line-height:1.4}
-  .finding-item.expanded .finding-fix{display:block}
-
-  /* ── Severity chart ── */
-  .sev-chart{display:flex;flex-direction:column;gap:10px}
-  .sev-row{display:flex;align-items:center;gap:10px}
-  .sev-row-label{font-size:12px;font-weight:700;min-width:70px}
-  .sev-row-bar{flex:1;height:22px;background:#132554;border-radius:4px;overflow:hidden}
-  .sev-row-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:8px;font-size:11px;font-weight:700;color:#060D1F;transition:width 1s ease}
-  .sev-row-count{font-size:13px;font-weight:700;min-width:24px;text-align:right}
-
-  /* ── Chat ── */
-  .chat-container{background:#0D1B3E;border-radius:12px;padding:18px;border:1px solid #132554}
-  .gemini-badge{background:linear-gradient(90deg,#4285F4,#34A853);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:700;font-size:12px}
-  .quick-questions{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
-  .quick-q{background:#132554;border:1px solid #4285F433;color:#4285F4;border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;transition:.15s}
-  .quick-q:hover{border-color:#4285F4;background:#0D1B3E}
-  .chat-messages{height:300px;overflow-y:auto;margin-bottom:14px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth}
-  .chat-messages::-webkit-scrollbar{width:4px}
-  .chat-messages::-webkit-scrollbar-track{background:#132554;border-radius:2px}
-  .chat-messages::-webkit-scrollbar-thumb{background:#4285F4;border-radius:2px}
-  .msg{padding:10px 14px;border-radius:10px;max-width:88%;font-size:13px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
-  .msg.user{background:#132554;border:1px solid #4285F4;align-self:flex-end;color:#E8F0FE;border-radius:10px 10px 2px 10px}
-  .msg.bot{background:#0a1628;border:1px solid #34A853;align-self:flex-start;color:#E8F0FE;border-radius:10px 10px 10px 2px}
-  .msg.thinking{color:#8BA3C7;font-style:italic;border-color:#132554}
-  .msg-meta{font-size:10px;color:#8BA3C7;margin-top:4px}
-  .chat-input-row{display:flex;gap:10px}
-  .chat-input{flex:1;background:#0a1628;border:1px solid #4285F4;border-radius:8px;padding:10px 14px;color:#E8F0FE;font-size:13px;outline:none;font-family:inherit;transition:.15s}
-  .chat-input:focus{border-color:#4285F4;box-shadow:0 0 0 2px #4285F420}
-  .chat-send{background:#4285F4;color:#fff;border:none;padding:10px 22px;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px;transition:.15s}
-  .chat-send:hover{background:#3367D6}
-  .chat-send:disabled{background:#132554;color:#8BA3C7;cursor:not-allowed}
-
-  /* ── Empty / Loading states ── */
-  .empty-state{color:#8BA3C7;font-size:13px;text-align:center;padding:24px;border:1px dashed #132554;border-radius:8px}
-  .spinner{display:inline-block;width:12px;height:12px;border:2px solid #4285F440;border-top-color:#4285F4;border-radius:50%;animation:spin .7s linear infinite;margin-right:6px}
-  @keyframes spin{to{transform:rotate(360deg)}}
-
-  /* ── Responsive ── */
-  @media(max-width:1100px){.content-grid{grid-template-columns:1fr}.stats-grid{grid-template-columns:repeat(3,1fr)}}
-  @media(max-width:680px){.stats-grid{grid-template-columns:repeat(2,1fr)}.header{flex-direction:column;gap:8px}}
-</style>
+        .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid #4285F440; border-top-color: #4285F4; border-radius: 50%; animation: spin .7s linear infinite }
+        @keyframes spin { to { transform: rotate(360deg) } }
+        .empty-state { color: #8BA3C7; font-size: 13px; text-align: center; padding: 24px; border: 1px dashed #132554; border-radius: 8px }
+        .resource-item { cursor: pointer; transition: 0.2s }
+        .resource-item:hover { background: #132554 }
+    </style>
 </head>
 <body>
 
-<!-- Header -->
 <div class="header">
-  <div class="logo">
-    <div class="logo-icon">☁️</div>
-    <div class="logo-text">CloudOps <span>AI Copilot</span></div>
-  </div>
-  <div class="header-right">
-    <div class="gcp-badge">☁️ GCP</div>
-    <div class="model-badge">✦ Demo AI Copilot</div>
-    <div class="model-badge" style="border-color:#9B59FF;color:#9B59FF">Problem 7 + 14</div>
-  </div>
+    <div class="logo">
+        <div class="logo-icon">☁️</div>
+        <div class="logo-text">CloudOps <span>AI Copilot</span></div>
+    </div>
+    <div class="header-right">
+        <div class="gcp-badge">☁️ GCP</div>
+        <div class="model-badge">✦ AI Security Engine</div>
+    </div>
 </div>
 
-<!-- Main -->
 <div class="main">
-
-  <!-- Scan button row -->
-  <div class="scan-row">
-    <button class="scan-btn" id="scanBtn" onclick="runScan()">
-      <span id="scanIcon">🔍</span> Run GCP Security Scan
-    </button>
-    <div class="project-info" id="projectInfo">No project scanned yet</div>
-  </div>
-
-  <!-- Stats -->
-  <div class="stats-grid">
-    <div class="stat-card risk">
-      <div class="stat-label">SECURITY RISK SCORE</div>
-      <div class="stat-value" id="riskScore" style="color:#8BA3C7">--</div>
-      <div class="risk-bar"><div class="risk-fill" id="riskBar" style="width:0%;background:#4285F4"></div></div>
-    </div>
-    <div class="stat-card critical">
-      <div class="stat-label">CRITICAL ISSUES</div>
-      <div class="stat-value" id="criticalCount" style="color:#EA4335">--</div>
-    </div>
-    <div class="stat-card high">
-      <div class="stat-label">HIGH ISSUES</div>
-      <div class="stat-value" id="highCount" style="color:#FBBC05">--</div>
-    </div>
-    <div class="stat-card findings">
-      <div class="stat-label">TOTAL FINDINGS</div>
-      <div class="stat-value" id="totalFindings" style="color:#34A853">--</div>
-    </div>
-    <div class="stat-card cost">
-      <div class="stat-label">MONTHLY COST WASTE</div>
-      <div class="stat-value" id="costWaste" style="color:#FF6D00">--</div>
-    </div>
-  </div>
-
-  <!-- Resource list + Severity chart -->
-  <div class="content-grid">
-
-    <div class="card">
-      <div class="card-title">🗂 GCP RESOURCES SCANNED</div>
-      <div id="resourceList">
-        <div class="empty-state">Run a scan to see your GCP resources</div>
-      </div>
+    <div class="scan-row">
+        <button class="scan-btn" id="scanBtn" onclick="runScan()">
+            <span id="scanIcon">🔍</span> Run GCP Security Scan
+        </button>
+        <div id="projectInfo" class="empty-state" style="padding: 8px 16px; border-style: solid">No project scanned yet</div>
     </div>
 
-    <div class="card">
-      <div class="card-title">📊 FINDINGS BY SEVERITY</div>
-      <div id="severityChart">
-        <div class="empty-state">Scan results will appear here</div>
-      </div>
+    <div class="stats-grid">
+        <div class="stat-card risk">
+            <div class="stat-label">SECURITY RISK SCORE</div>
+            <div class="stat-value" id="riskScore">--</div>
+            <div class="risk-bar"><div class="risk-fill" id="riskBar"></div></div>
+        </div>
+        <div class="stat-card critical"><div class="stat-label">CRITICAL</div><div class="stat-value" id="criticalCount">--</div></div>
+        <div class="stat-card high"><div class="stat-label">HIGH</div><div class="stat-value" id="highCount">--</div></div>
+        <div class="stat-card findings"><div class="stat-label">TOTAL FINDINGS</div><div class="stat-value" id="totalFindings">--</div></div>
+        <div class="stat-card cost"><div class="stat-label">EST. WASTE</div><div class="stat-value" id="costWaste">--</div></div>
     </div>
 
-  </div>
-
-  <!-- All findings -->
-  <div class="card" style="margin-bottom:18px">
-    <div class="card-title">🚨 ALL SECURITY FINDINGS <span style="color:#4285F4;font-weight:400;font-size:10px">(click to expand remediation)</span></div>
-    <div id="findingsList">
-      <div class="empty-state">Run a scan to see detailed findings</div>
-    </div>
-  </div>
-
-  <!-- GenAI Chat -->
-  <div class="chat-container">
-    <div class="card-title">
-      💬 GENAI SECURITY COPILOT &nbsp;
-      <span class="gemini-badge">powered by CloudOps AI Engine</span>
+    <div class="content-grid">
+        <div class="card">
+            <div class="card-title">🗂 RESOURCES (Click to analyze)</div>
+            <div id="resourceList"><div class="empty-state">Scan to view resources</div></div>
+        </div>
+        <div class="card">
+            <div class="card-title">📊 SEVERITY BREAKDOWN</div>
+            <div id="severityChart"><div class="empty-state">Scan for metrics</div></div>
+        </div>
     </div>
 
-    <div class="quick-questions">
-      <button class="quick-q" onclick="ask('What is the most critical GCP issue I must fix first?')">🔴 Most critical issue?</button>
-      <button class="quick-q" onclick="ask('Give me gcloud commands to fix all CRITICAL findings')">⚡ Fix critical with gcloud</button>
-      <button class="quick-q" onclick="ask('Which GCP resources have public IP and how do I secure them?')">🌐 Public IP risks</button>
-      <button class="quick-q" onclick="ask('Explain the IAM service account risk and how to apply least privilege')">🔑 IAM & least privilege</button>
-      <button class="quick-q" onclick="ask('How do I secure the GKE cluster following CIS benchmarks?')">☸️ Harden GKE cluster</button>
-      <button class="quick-q" onclick="ask('What will happen if I ignore these findings? Explain business impact')">💼 Business impact</button>
+    <div class="card" style="margin-bottom:18px">
+        <div class="card-title">🚨 SECURITY FINDINGS</div>
+        <div id="findingsList"><div class="empty-state">No findings to show</div></div>
     </div>
 
-    <div class="chat-messages" id="chatMessages">
-      <div class="msg bot">
-        👋 Hi! I'm your GCP Security Copilot powered by <strong>Gemini 2.5 Flash</strong>.
-        Run a security scan first, then ask me anything — I'll explain risks in plain English and give you exact GCP remediation steps, gcloud commands, and Terraform snippets.
-        <div class="msg-meta">✦ gemini-2.5-flash · CloudOps AI Copilot</div>
-      </div>
+    <div class="chat-container">
+        <div class="chat-messages" id="chatMessages">
+            <div class="msg bot">👋 I'm your GCP Copilot. Run a scan to find vulnerabilities!</div>
+        </div>
+        <div class="chat-input-row">
+            <input class="chat-input" id="chatInput" placeholder="Ask about remediation..." onkeydown="if(event.key==='Enter')sendChat()">
+            <button class="chat-send" id="chatBtn" onclick="sendChat()">Send ➤</button>
+        </div>
     </div>
-
-    <div class="chat-input-row">
-      <input
-        class="chat-input"
-        id="chatInput"
-        placeholder="Ask about your GCP security findings, risks, or remediation steps..."
-        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"
-      >
-      <button class="chat-send" id="chatBtn" onclick="sendChat()">Send ➤</button>
-    </div>
-  </div>
-
-</div><!-- /main -->
+</div>
 
 <script>
-const API = 'https://cloudops-ai-copilot.onrender.com';
-let   scanData = null;
+    const API = 'https://cloudops-ai-copilot.onrender.com';
+    let scanData = null;
 
-// ── Scan ──────────────────────────────────────────────────────
-async function runScan() {
-  const btn  = document.getElementById('scanBtn');
-  const icon = document.getElementById('scanIcon');
-  btn.disabled   = true;
-  icon.innerHTML = '<span class="spinner"></span>';
-  btn.childNodes[1].textContent = ' Scanning GCP resources...';
+    async function runScan() {
+        const btn = document.getElementById('scanBtn');
+        btn.disabled = true;
+        document.getElementById('scanIcon').innerHTML = '<span class="spinner"></span>';
 
-  try {
-    const res  = await fetch(`${API}/api/scan`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    scanData = await res.json();
-    renderAll(scanData);
-  } catch(e) {
-    alert('❌ Cannot connect to backend.\n\nStart it with:\n  cd backend\n  uvicorn main:app --reload\n\nError: ' + e.message);
-  }
-
-  btn.disabled        = false;
-  icon.innerHTML      = '🔍';
-  btn.childNodes[1].textContent = ' Run GCP Security Scan';
-}
-
-// ── Render everything ─────────────────────────────────────────
-function renderAll(data) {
-  renderStats(data);
-  renderProjectInfo(data);
-  renderResources(data.resources);
-  renderSeverityChart(data.severity_counts, data.total_findings);
-  renderFindings(data.resources);
-}
-
-function renderStats(data) {
-  const score = data.risk_score;
-  setEl('riskScore',     score);
-  setEl('criticalCount', data.severity_counts.CRITICAL);
-  setEl('highCount',     data.severity_counts.HIGH);
-  setEl('totalFindings', data.total_findings);
-  setEl('costWaste',     '$' + (data.estimated_monthly_waste || 0).toFixed(0));
-
-  // Risk score color
-  const color  = score < 40 ? '#EA4335' : score < 65 ? '#FBBC05' : '#34A853';
-  document.getElementById('riskScore').style.color = color;
-  document.getElementById('riskBar').style.width   = score + '%';
-  document.getElementById('riskBar').style.background = color;
-}
-
-function renderProjectInfo(data) {
-  document.getElementById('projectInfo').innerHTML =
-    `Project: <span>${data.project_name}</span> &nbsp;|&nbsp; ID: <span>${data.project_id}</span> &nbsp;|&nbsp; ${data.resources_scanned} resources scanned`;
-}
-
-function renderResources(resources) {
-  const el = document.getElementById('resourceList');
-  if (!resources?.length) { el.innerHTML = '<div class="empty-state">No resources found</div>'; return; }
-
-  el.innerHTML = resources.map(r => {
-    const cls = r.critical_count > 0 ? 'has-critical'
-              : r.high_count     > 0 ? 'has-high'
-              : r.finding_count  > 0 ? 'has-medium'
-              : 'no-issues';
-
-    const badges = [
-      r.critical_count > 0 ? `<span class="rbadge rbadge-critical">${r.critical_count} CRITICAL</span>` : '',
-      r.high_count     > 0 ? `<span class="rbadge rbadge-high">${r.high_count} HIGH</span>`         : '',
-      r.finding_count === 0 ? `<span class="rbadge" style="background:rgba(52,168,83,.2);color:#34A853;border:1px solid #34A85340">✓ Clean</span>` : '',
-    ].join('');
-
-    return `<div class="resource-item ${cls}" onclick="filterFindingsByResource('${r.id}')">
-      <div class="resource-name">${r.name}</div>
-      <div class="resource-meta">${r.type} · ${r.region} · $${r.cost_per_month}/mo</div>
-      <div class="resource-badges">${badges}</div>
-    </div>`;
-  }).join('');
-}
-
-function renderSeverityChart(counts, total) {
-  const el    = document.getElementById('severityChart');
-  const items = [
-    { label: 'CRITICAL', count: counts.CRITICAL, color: '#EA4335', text: '#fff' },
-    { label: 'HIGH',     count: counts.HIGH,     color: '#FBBC05', text: '#060D1F' },
-    { label: 'MEDIUM',   count: counts.MEDIUM,   color: '#4285F4', text: '#fff' },
-    { label: 'LOW',      count: counts.LOW,       color: '#8BA3C7', text: '#060D1F' },
-  ];
-
-  el.innerHTML = `<div class="sev-chart">` + items.map(i => {
-    const pct = total > 0 ? Math.round((i.count / total) * 100) : 0;
-    return `<div class="sev-row">
-      <div class="sev-row-label" style="color:${i.color}">${i.label}</div>
-      <div class="sev-row-bar">
-        <div class="sev-row-fill" style="width:${pct}%;background:${i.color};color:${i.text}">
-          ${pct > 8 ? pct + '%' : ''}
-        </div>
-      </div>
-      <div class="sev-row-count" style="color:${i.color}">${i.count}</div>
-    </div>`;
-  }).join('') + `</div>
-  <div style="margin-top:16px;padding:12px;background:#0a1628;border-radius:8px;font-size:12px;color:#8BA3C7;line-height:1.6">
-    <div style="color:#fff;font-weight:600;margin-bottom:4px">📋 Scan Summary</div>
-    Total: <strong style="color:#fff">${total}</strong> findings across 
-    <strong style="color:#fff">${Object.values(counts).reduce((a,b)=>a+b,0)}</strong> checks run
-  </div>`;
-}
-
-function renderFindings(resources) {
-  const el = document.getElementById('findingsList');
-  const all = resources.flatMap(r =>
-    r.findings.map(f => ({ ...f, resource_name: r.name, resource_type: r.type }))
-  );
-
-  const order = { CRITICAL:0, HIGH:1, MEDIUM:2, LOW:3 };
-  all.sort((a,b) => order[a.severity] - order[b.severity]);
-
-  if (!all.length) { el.innerHTML = '<div class="empty-state" style="color:#34A853">✅ No findings — your GCP project looks clean!</div>'; return; }
-
-  el.innerHTML = all.map((f, i) => `
-    <div class="finding-item sev-${f.severity}" id="fi-${i}" onclick="toggleFinding(${i})">
-      <div>
-        <span class="sev-badge badge-${f.severity}">${f.severity}</span>
-        <span class="rule-code">${f.rule}</span>
-        <span style="font-size:10px;color:#8BA3C7;margin-left:8px">${f.resource_name} · ${f.resource_type}</span>
-      </div>
-      <div class="finding-title">${f.title}</div>
-      <div class="finding-desc">${f.description}</div>
-      <div class="finding-fix">🔧 <strong>Fix:</strong> ${f.remediation}</div>
-    </div>`).join('');
-}
-
-function toggleFinding(i) {
-  document.getElementById(`fi-${i}`).classList.toggle('expanded');
-}
-
-function filterFindingsByResource(resourceId) {
-  ask(`Tell me about all security findings for the resource "${resourceId}" and how to fix them in priority order`);
-}
-
-// ── Chat ──────────────────────────────────────────────────────
-async function sendChat() {
-  const input = document.getElementById('chatInput');
-  const msg   = input.value.trim();
-  if (!msg) return;
-
-  addMsg(msg, 'user');
-  input.value = '';
-  document.getElementById('chatBtn').disabled = true;
-
-  const thinking = addMsg('⏳ Thinking...', 'bot');
-
-  try {
-    const res = await fetch(`${API}/api/chat`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        message: msg,
-        scan_context: scanData || {}
-      })
-    });
-
-    const data = await res.json();
-    thinking.remove();
-
-    // 🔥 HANDLE ALL CASES
-    if (data.response) {
-      addMsg(data.response, 'bot');
-    } else if (data.detail) {
-      addMsg("⚠️ " + data.detail, 'bot');
-    } else {
-      addMsg("⚠️ Unexpected response from server", 'bot');
+        try {
+            const res = await fetch(`${API}/api/scan`);
+            if (!res.ok) throw new Error("Backend cold start or error");
+            scanData = await res.json();
+            renderAll(scanData);
+        } catch (e) {
+            alert('Server is waking up... Please wait 10 seconds and try again.');
+        } finally {
+            btn.disabled = false;
+            document.getElementById('scanIcon').innerHTML = '🔍';
+        }
     }
 
-  } catch(e) {
-    thinking.remove();
-    addMsg("❌ Backend not reachable (Render sleeping or network issue)", 'bot');
-  }
+    function renderAll(data) {
+        setEl('riskScore', data.risk_score);
+        setEl('criticalCount', data.severity_counts.CRITICAL);
+        setEl('highCount', data.severity_counts.HIGH);
+        setEl('totalFindings', data.total_findings);
+        setEl('costWaste', '$' + data.estimated_monthly_waste);
+        
+        document.getElementById('riskBar').style.width = data.risk_score + '%';
+        document.getElementById('riskBar').style.background = data.risk_score < 50 ? '#EA4335' : '#34A853';
 
-  document.getElementById('chatBtn').disabled = false;
-}
+        renderResources(data.resources);
+        renderFindings(data.resources);
+        renderSeverityChart(data.severity_counts, data.total_findings);
+    }
 
-function ask(q) {
-  document.getElementById('chatInput').value = q;
-  sendChat();
-}
+    function renderSeverityChart(counts, total) {
+        const el = document.getElementById('severityChart');
+        const items = [
+            { label: 'CRITICAL', count: counts.CRITICAL, color: '#EA4335' },
+            { label: 'HIGH', count: counts.HIGH, color: '#FBBC05' },
+            { label: 'MEDIUM', count: counts.MEDIUM, color: '#4285F4' }
+        ];
+        el.innerHTML = items.map(i => {
+            const pct = total > 0 ? (i.count / total * 100) : 0;
+            return `
+                <div class="sev-row">
+                    <div class="sev-label" style="color:${i.color}">${i.label}</div>
+                    <div class="sev-bar-bg"><div class="sev-bar-fill" style="width:${pct}%; background:${i.color}"></div></div>
+                    <div style="font-size:11px; width:20px">${i.count}</div>
+                </div>`;
+        }).join('');
+    }
 
-function addMsg(text, type) {
-  const div       = document.createElement('div');
-  div.className   = `msg ${type}`;
-  div.textContent = text;
-  const c         = document.getElementById('chatMessages');
-  c.appendChild(div);
-  c.scrollTop = c.scrollHeight;
-  return div;
-}
+    function renderResources(resources) {
+        const el = document.getElementById('resourceList');
+        el.innerHTML = resources.map(r => `
+            <div class="resource-item ${r.critical_count > 0 ? 'has-critical' : 'no-issues'}" 
+                 onclick="ask('Analyze security for resource: ${r.name}')" 
+                 style="padding:10px; border-bottom:1px solid #132554; display:flex; justify-content:space-between">
+                <div>
+                    <div style="font-size:13px; font-weight:bold">${r.name}</div>
+                    <div style="font-size:10px; color:#8BA3C7">${r.type}</div>
+                </div>
+                <div class="rbadge ${r.critical_count > 0 ? 'rbadge-critical' : ''}">${r.critical_count} ⚠️</div>
+            </div>
+        `).join('');
+    }
 
-// ── Utils ─────────────────────────────────────────────────────
-function setEl(id, val) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = val;
-}
+    function renderFindings(resources) {
+        const el = document.getElementById('findingsList');
+        const all = resources.flatMap(r => r.findings.map(f => ({...f, rName: r.name})));
+        el.innerHTML = all.map(f => `
+            <div class="finding-item sev-${f.severity}" onclick="this.classList.toggle('expanded')" style="border-bottom:1px solid #132554; padding:10px">
+                <span class="sev-badge badge-${f.severity}">${f.severity}</span>
+                <strong style="font-size:13px">${f.title}</strong>
+                <div class="finding-desc" style="font-size:12px; margin-top:5px; color:#8BA3C7">${f.description}</div>
+                <div class="finding-fix">🔧 <strong>Solution:</strong> ${f.remediation}</div>
+            </div>
+        `).join('');
+    }
+
+    async function sendChat() {
+        const input = document.getElementById('chatInput');
+        const btn = document.getElementById('chatBtn');
+        const msg = input.value.trim();
+        if (!msg) return;
+
+        addMsg(msg, 'user');
+        input.value = '';
+        input.disabled = true;
+        btn.disabled = true;
+        const thinking = addMsg('⏳ Thinking...', 'bot');
+
+        try {
+            const res = await fetch(`${API}/api/chat`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ message: msg, scan_context: scanData || {} })
+            });
+            const data = await res.json();
+            thinking.remove();
+            addMsg(data.response || "No response", 'bot');
+        } catch (e) {
+            thinking.remove();
+            addMsg("😴 Server is sleeping. Retrying automatically in 3s...", 'bot');
+            setTimeout(sendChat, 3000); // AUTO RETRY Logic
+        } finally {
+            input.disabled = false;
+            btn.disabled = false;
+        }
+    }
+
+    function addMsg(text, type) {
+        const div = document.createElement('div');
+        div.className = `msg ${type}`;
+        div.innerHTML = type === 'bot' ? marked.parse(text) : text;
+        const c = document.getElementById('chatMessages');
+        c.appendChild(div);
+        c.scrollTop = c.scrollHeight;
+        return div;
+    }
+
+    function ask(q) {
+        document.getElementById('chatInput').value = q;
+        sendChat();
+    }
+
+    function setEl(id, val) { 
+        const el = document.getElementById(id);
+        if(el) el.textContent = val; 
+    }
 </script>
 </body>
 </html>
