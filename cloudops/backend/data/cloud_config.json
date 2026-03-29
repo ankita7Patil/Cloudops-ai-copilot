@@ -1,0 +1,83 @@
+{
+  "project_id": "my-gcp-project-prod",
+  "project_name": "Production GCP Environment",
+  "resources": [
+    {
+      "id": "gcs-bucket-001",
+      "type": "Cloud Storage Bucket",
+      "name": "company-data-backup-prod",
+      "public_access": true,
+      "uniform_bucket_level_access": false,
+      "encryption_type": "Google-managed",
+      "cmek_enabled": false,
+      "versioning": false,
+      "lifecycle_policy": false,
+      "region": "us-central1",
+      "cost_per_month": 52.40
+    },
+    {
+      "id": "gce-instance-007",
+      "type": "Compute Engine VM",
+      "name": "prod-web-server-vm",
+      "machine_type": "n1-standard-4",
+      "os_login_enabled": false,
+      "serial_port_access": true,
+      "ssh_keys_in_metadata": true,
+      "shielded_vm": false,
+      "public_ip": true,
+      "firewall_ssh_open": true,
+      "auto_restart": false,
+      "region": "us-central1",
+      "cost_per_month": 140.20
+    },
+    {
+      "id": "cloudsql-db-003",
+      "type": "Cloud SQL Instance",
+      "name": "customer-records-db",
+      "database_version": "POSTGRES_14",
+      "public_ip_enabled": true,
+      "ssl_required": false,
+      "automated_backups": false,
+      "point_in_time_recovery": false,
+      "authorized_networks_all": true,
+      "region": "us-east1",
+      "cost_per_month": 96.50
+    },
+    {
+      "id": "iam-sa-admin",
+      "type": "IAM Service Account",
+      "name": "developer-service-account@myproject.iam.gserviceaccount.com",
+      "roles": ["roles/owner"],
+      "has_owner_role": true,
+      "key_rotation_days": 180,
+      "unused_days": 95,
+      "user_managed_keys": 4,
+      "cost_per_month": 0
+    },
+    {
+      "id": "vpc-fw-001",
+      "type": "VPC Firewall Rule",
+      "name": "allow-all-ingress",
+      "direction": "INGRESS",
+      "source_ranges": ["0.0.0.0/0"],
+      "all_ports_open": true,
+      "disabled": false,
+      "priority": 1000,
+      "region": "global",
+      "cost_per_month": 0
+    },
+    {
+      "id": "gke-cluster-001",
+      "type": "GKE Cluster",
+      "name": "prod-kubernetes-cluster",
+      "legacy_abac_enabled": true,
+      "network_policy_enabled": false,
+      "master_authorized_networks": false,
+      "private_cluster": false,
+      "workload_identity": false,
+      "auto_upgrade": false,
+      "region": "us-central1",
+      "cost_per_month": 218.60
+    }
+  ]
+}
