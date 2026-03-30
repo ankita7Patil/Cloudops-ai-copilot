@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 from rules import analyze_resource, calculate_risk_score, calculate_cost_waste
 from google import genai
 from google.genai import types
+from flask_cors import CORS
+CORS(app)
 
 load_dotenv()
 
