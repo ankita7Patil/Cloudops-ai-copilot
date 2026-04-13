@@ -6,6 +6,24 @@
 > *Submission for Srijan 2026 Hackathon — Problem 7 + Problem 14*
 
 ---
+## 👥 Meet the Team
+
+This project was designed and developed by team **Yuti** under **Srijan 2026 Hackthon - BY Atos Global IT Solutions and Services**.
+Feel free to connect with us and explore our work!
+
+### 👤 Ankita Patil  
+
+[![Email](https://img.shields.io/badge/Email-95ankita.s.patil%40gmail.com-red?style=flat&logo=gmail)](mailto:95ankita.s.patil@gmail.com)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Ankita%20Patil-blue?style=flat&logo=linkedin)](https://www.linkedin.com/in/ankita-patil-10b0732ab/)
+
+---
+
+### 👤 Mithilesh Kolhapurkar  
+
+[![Email](https://img.shields.io/badge/Email-m.kolhapurkar3529%40gmail.com-red?style=flat&logo=gmail)](mailto:m.kolhapurkar3529@gmail.com)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Mithilesh%20Kolhapurkar-blue?style=flat&logo=linkedin)](https://www.linkedin.com/in/mithilesh-kolhapurkar-258001214)
+
+---
 
 ## 🔗 Website / Demo Links
 - **V1 Demo:** https://storage.googleapis.com/cloudops-frontend-123/index.html
