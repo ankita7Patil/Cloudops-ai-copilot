@@ -8,8 +8,8 @@
 ---
 
 ## 🔗 Website / Demo Links
-V1 Demo: https://storage.googleapis.com/cloudops-frontend-123/index.html
-V2 Demo: https://gen-lang-client-0591533880.web.app/
+- **V1 Demo:** https://storage.googleapis.com/cloudops-frontend-123/index.html
+- **V2 Demo:** https://gen-lang-client-0591533880.web.app/
 
 ---
 
