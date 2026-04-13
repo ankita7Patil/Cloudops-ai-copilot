@@ -1,5 +1,3 @@
-# CloudOps AI Copilot 🛡️
-
 **Unified Autonomous Cloud Intelligence (UACI) — Multi-Generational Evolution**
 
 > Enterprise-grade GCP Cloud Security, Operations, and FinOps platform powered by Gemini 2.5 / 2.0 models  
